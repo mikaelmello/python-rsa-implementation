@@ -1,5 +1,12 @@
 import secrets
 import math
+
+def extended_euclid(a,b) :
+    if b == 0:
+        return a, 1, 0
+    q, w, e = extended_euclid(b,a % b)
+    return q, e, w - e *(a//b)
+
 def mrand(l, r):
     sz = r - l + 1
     return l + secrets.randbelow(sz)
@@ -41,7 +48,7 @@ def is_prime(n):
     return True
 
 def get_primes():
-    n = mrand(22,30)
+    n = mrand(246,256)
     base_num = 2**n
     x = base_num
     while(not is_prime(x)):
@@ -55,14 +62,11 @@ N = p1 * p2
 phiN = (p1-1) * (p2-1)
 print(p1,p2)
 print(phiN)
-e = mrand(10, 1000)
+e = mrand(10,1000)
 while(math.gcd(e, N) != 1 or math.gcd(e, phiN) != 1) :
     e = e + 1
-d = fexp(e,phiN-1,phiN)
-d1 = fexp(e,phiN-2,phiN)
-d2 = fexp(e,phiN,phiN)
+_, d, _ = extended_euclid(e, phiN)
+d = (d + 100 * phiN) % phiN
 print(math.gcd(e, N), math.gcd(e,phiN))
 print(e, d)
 print(mulmod(e, d, phiN))
-print(mulmod(e, d1, phiN))
-print(mulmod(e, d2, phiN))
