@@ -58,6 +58,18 @@ def is_prime(n):
     return True
 
 
+def gen_prime(bit_length):
+    prime = secrets.randbits(bit_length)
+    prime = prime | 1
+    prime = prime | (1 << (bit_length-1))
+    prime = prime | (1 << (bit_length-2))
+
+    while not is_prime(prime):
+        prime += 2
+
+    return prime
+
+
 def get_large_primes():
     """Generates two large primes"""
     n = mrand(246, 256)

@@ -7,19 +7,26 @@ class Key:
         self.exp = exp
 
 
-def generate_key_pair():
-    # Gets large primes
-    p1, p2 = get_large_primes()
+def generate_key_pair(bit_length):
+    allowed_bit_lengths = [512, 1024, 2048, 3072, 4096]
+
+    if bit_length not in allowed_bit_lengths:
+        print(f'Key bit length {bit_length} not allowed')
+        return
+
+    e = 65537
+
+    p = gen_prime(bit_length // 2)
+    while (p % e) == 1:
+        p = gen_prime(bit_length // 2)
+
+    q = gen_prime(bit_length - bit_length // 2)
+    while (q % e) == 1:
+        q = gen_prime(bit_length - bit_length // 2)
 
     # Calculates N and its totient
-    n = p1 * p2
-    phiN = (p1-1) * (p2-1)
-
-    # Get a random e until it satisfies our condition
-    # This does not take long for probabilistic reasons
-    e = mrand(1, phiN-1)
-    while(math.gcd(e, n) != 1 or math.gcd(e, phiN) != 1):
-        e = mrand(1, phiN-1)
+    n = p * q
+    phiN = (p-1) * (q-1)
 
     # Gets the equivalent d
     _, d, _ = extended_euclid(e, phiN)

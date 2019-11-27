@@ -7,7 +7,7 @@ sys.setrecursionlimit(1500)
 
 class WidgetTestCase(unittest.TestCase):
     def setUp(self):
-        self.public_key, self.private_key = rsa.generate_key_pair()
+        self.public_key, self.private_key = rsa.generate_key_pair(512)
 
     def test_n_equal(self):
         self.assertEqual(self.public_key.n, self.private_key.n,
