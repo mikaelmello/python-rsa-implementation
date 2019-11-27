@@ -1,8 +1,14 @@
 import rsa
+import argparse
 
-public_key, private_key = rsa.generate_key_pair(512)
+# initiate the parser
+parser = argparse.ArgumentParser()
+parser.add_argument("-V", "--version",
+                    help="show program version", action="store_true")
 
-print(public_key.n)
-print(public_key.exp)
-print(private_key.n)
-print(private_key.exp)
+# read arguments from the command line
+args = parser.parse_args()
+
+# check for --version or -V
+if args.version:
+    print("this is myprogram version 0.1")
