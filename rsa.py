@@ -57,11 +57,11 @@ class PrivateKey:
             b = base64.b64encode(a).decode('ascii')
             limit = 64
             offset = 0
-            key = f'-----BEGIN PUBLIC KEY-----\r\n'
+            key = f'-----BEGIN PRIVATE KEY-----\r\n'
             while offset < len(b):
                 key += b[offset:offset+limit] + '\r\n'
                 offset += limit
-            key += '-----END PUBLIC KEY-----'
+            key += '-----END PRIVATE KEY-----'
             theFile.write(key)
 
     @classmethod
