@@ -124,19 +124,7 @@ The most commonly used commands are:
 
         args = parser.parse_args(sys.argv[1:])
         private_key = rsa.PrivateKey.importFile(args.private_key_file_path)
-
-        BLOCKSIZE = 65536
-        hasher = hashlib.sha1()
-        with open(args.output_file_path, 'w+') as ofile:
-            with open(args.input_file_path, 'rb') as afile:
-                buf = afile.read(BLOCKSIZE)
-                while len(buf) > 0:
-                    hasher.update(buf)
-                    buf = afile.read(BLOCKSIZE)
-            hash = hasher.hexdigest()
-
-            signature = rsa.encrypt(private_key, hash)
-            ofile.write(signature)
+        rsa.sign(private_key, args.input_file_path, args.output_file_path)
 
     def verify(self):
         parser = argparse.ArgumentParser(
@@ -163,27 +151,7 @@ The most commonly used commands are:
         args = parser.parse_args(sys.argv[1:])
         public_key = rsa.PublicKey.importFile(args.public_key_file_path)
 
-        BLOCKSIZE = 65536
-        hasher = hashlib.sha1()
-        with open(args.signature_file_path, 'r') as ofile:
-            signature = ofile.read()
-
-            try:
-                hash = rsa.decrypt(public_key, signature)
-
-                with open(args.input_file_path, 'rb') as afile:
-                    buf = afile.read(BLOCKSIZE)
-                    while len(buf) > 0:
-                        hasher.update(buf)
-                        buf = afile.read(BLOCKSIZE)
-                file_hash = hasher.hexdigest()
-
-                if file_hash == hash:
-                    print('Verified')
-                else:
-                    print('Not verified')
-            except:
-                print('Not verified')
+        rsa.verify(public_key, args.input_file_path, args.signature_file_path)
 
 
 if __name__ == '__main__':

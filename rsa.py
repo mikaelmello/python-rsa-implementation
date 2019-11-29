@@ -1,6 +1,7 @@
 from math_utils import *
 import asn1tools
 import base64
+import hashlib
 
 
 class PublicKey:
@@ -172,6 +173,51 @@ def encrypt(key, message):
     if len(hexrep) % 2 == 1:
         hexrep = '0' + hexrep
     return hexrep
+
+
+def sign(key, file, output):
+    if type(key) is not PrivateKey:
+        raise 'Must be private key to sign files'
+
+    BLOCKSIZE = 65536
+    hasher = hashlib.sha1()
+    with open(output, 'w+') as ofile:
+        with open(file, 'rb') as afile:
+            buf = afile.read(BLOCKSIZE)
+            while len(buf) > 0:
+                hasher.update(buf)
+                buf = afile.read(BLOCKSIZE)
+        hash = hasher.hexdigest()
+
+        signature = encrypt(key, hash)
+        ofile.write(signature)
+
+
+def verify(key, file, signature_file):
+    if type(key) is not PublicKey:
+        raise 'Must be public key to sign files'
+
+    BLOCKSIZE = 65536
+    hasher = hashlib.sha1()
+    with open(signature_file, 'r') as ofile:
+        signature = ofile.read()
+
+        try:
+            hash = decrypt(key, signature)
+
+            with open(file, 'rb') as afile:
+                buf = afile.read(BLOCKSIZE)
+                while len(buf) > 0:
+                    hasher.update(buf)
+                    buf = afile.read(BLOCKSIZE)
+            file_hash = hasher.hexdigest()
+
+            if file_hash == hash:
+                print('Verified')
+            else:
+                print('Not verified')
+        except:
+            print('Not verified')
 
 
 def decrypt(key, message):
