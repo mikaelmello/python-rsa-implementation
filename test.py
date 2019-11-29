@@ -3,6 +3,7 @@ import math_utils
 import unittest
 import sys
 import secrets
+import string
 sys.setrecursionlimit(1500)
 
 
@@ -26,10 +27,9 @@ class WidgetTestCase(unittest.TestCase):
     def test_encryption_decryption(self):
         for i in range(10):
             with self.subTest():
-                message_length = secrets.randbelow(100)
-                message = []
-                for j in range(message_length):
-                    message.append(secrets.randbelow(self.public_key.n))
+                letters = string.ascii_lowercase
+                message = ''.join(letters[secrets.randbelow(len(letters))]
+                                  for i in range(50))
                 cipher = rsa.encrypt(self.public_key, message)
                 plain = rsa.decrypt(self.private_key, cipher)
                 self.assertEqual(
