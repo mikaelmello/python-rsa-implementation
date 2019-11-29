@@ -136,7 +136,8 @@ def encrypt(key, message):
     padding_size = length - 3 - len(plain)
 
     if len(plain) >= max_octets:
-        raise f'Message must have size of at most {max_octets} octets, it has {len(plain)}'
+        raise Exception(
+            f'Message must have size smaller than {max_octets} octets, it has {len(plain)}')
 
     encryption_block = bytearray()  # EB = 00 || BT || PS || 00 || D
     encryption_block.append(0x00)
@@ -153,7 +154,7 @@ def encrypt(key, message):
                 random_octet = secrets.randbits(8)
             encryption_block.append(random_octet)
     else:
-        raise 'Unknown key type'
+        raise Exception('Unknown key type')
 
     encryption_block.append(0x00)
 
@@ -177,7 +178,7 @@ def encrypt(key, message):
 
 def sign(key, file, output):
     if type(key) is not PrivateKey:
-        raise 'Must be private key to sign files'
+        raise Exception('Must be private key to sign files')
 
     BLOCKSIZE = 65536
     hasher = hashlib.sha1()
@@ -195,7 +196,7 @@ def sign(key, file, output):
 
 def verify(key, file, signature_file):
     if type(key) is not PublicKey:
-        raise 'Must be public key to sign files'
+        raise Exception('Must be public key to sign files')
 
     BLOCKSIZE = 65536
     hasher = hashlib.sha1()
@@ -238,12 +239,14 @@ def decrypt(key, message):
 
     plain_bytes = int.to_bytes(plain, length, 'big')
     if plain_bytes[0] != 0x00:
-        raise 'Invalid decryption, wrong header byte'
+        raise Exception('Invalid decryption, wrong header byte')
 
     if plain_bytes[1] == 0x02 and type(key) is PublicKey:
-        raise 'Trying to decrypt using public key when header says it should be a private key'
+        raise Exception(
+            'Trying to decrypt using public key when header says it should be a private key')
     elif plain_bytes[1] != 0x02 and type(key) is PrivateKey:
-        raise 'Trying to decrypt using private key when header says it should be a public key'
+        raise Exception(
+            'Trying to decrypt using private key when header says it should be a public key')
 
     padding_index = 2
     while plain_bytes[padding_index] != 0x00:
@@ -251,7 +254,7 @@ def decrypt(key, message):
     padding_length = padding_index - 2 + 1
 
     if padding_length < 8:
-        raise 'Invalid padding string'
+        raise Exception('Invalid padding string')
 
     data = plain_bytes[padding_index + 1:]
     return str(data, 'utf-8')
