@@ -21,7 +21,7 @@ class PublicKey:
             theFile.write(key)
 
     @classmethod
-    def fromString(cls, input_file):
+    def importFile(cls, input_file):
         with open(input_file, 'r') as theFile:
             data = theFile.readlines()
             encoded = ''
@@ -65,8 +65,8 @@ class PrivateKey:
             theFile.write(key)
 
     @classmethod
-    def fromString(cls, output_file):
-        with open(output_file, 'r') as theFile:
+    def importFile(cls, input_file):
+        with open(input_file, 'r') as theFile:
             data = theFile.readlines()
             encoded = ''
             for i in range(1, len(data)-1):
@@ -158,8 +158,19 @@ def encrypt(key, message):
 
     encryption_block.extend(plain)
     data = int.from_bytes(encryption_block, 'big')
-    cipher = fexp(data, key.e, key.n)
+
+    cipher = 0
+    if type(key) is PrivateKey:
+        m1 = fexp(data, key.dp, key.p)
+        m2 = fexp(data, key.dq, key.q)
+        h = (key.qinv*(m1+key.p - m2)) % key.p
+        cipher = m2 + h*key.q
+    else:
+        cipher = fexp(data, key.e, key.n)
+
     hexrep = hex(cipher)[2:]
+    if len(hexrep) % 2 == 1:
+        hexrep = '0' + hexrep
     return hexrep
 
 
@@ -168,7 +179,6 @@ def decrypt(key, message):
 
     length = bits(key.n) // 8
     max_octets = length - 11
-
     data = int.from_bytes(bytes.fromhex(message), 'big')
     plain = data
 
@@ -177,14 +187,17 @@ def decrypt(key, message):
         m2 = fexp(data, key.dq, key.q)
         h = (key.qinv*(m1+key.p - m2)) % key.p
         plain = m2 + h*key.q
-
-        plain2 = fexp(data, key.d, key.n)
     else:
         plain = fexp(data, key.e, key.n)
 
     plain_bytes = int.to_bytes(plain, length, 'big')
     if plain_bytes[0] != 0x00:
         raise 'Invalid decryption, wrong header byte'
+
+    if plain_bytes[1] == 0x02 and type(key) is PublicKey:
+        raise 'Trying to decrypt using public key when header says it should be a private key'
+    elif plain_bytes[1] != 0x02 and type(key) is PrivateKey:
+        raise 'Trying to decrypt using private key when header says it should be a public key'
 
     padding_index = 2
     while plain_bytes[padding_index] != 0x00:

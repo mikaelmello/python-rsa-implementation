@@ -6,6 +6,7 @@ import asn1tools
 import base64
 import pathlib
 import sys
+import hashlib
 
 
 class ArgumentParser(object):
@@ -17,9 +18,9 @@ class ArgumentParser(object):
 
 The most commonly used commands are:
    generate     Generates a keypair
-   encrypt      Encrypts a file using an imported public key
-   decrypt      Decrypts a file using an imported private key
-   signs        Signs a file using an imported private key
+   encrypt      Encrypts a string using an imported key
+   decrypt      Decrypts a string using an imported key
+   sign         Signs a file using an imported private key
    verify       Verifies a signature using an imported public key
 ''')
 
@@ -55,13 +56,134 @@ The most commonly used commands are:
         public_key.export(path.joinpath('key.pub'))
         private_key.export(path.joinpath('key'))
 
-    def fetch(self):
+    def encrypt(self):
         parser = argparse.ArgumentParser(
-            description='Download objects and refs from another repository')
-        # NOT prefixing the argument with -- means it's not optional
-        parser.add_argument('repository')
-        args = parser.parse_args(sys.argv[2:])
-        print('Running git fetch, repository=%s' % args.repository)
+            description='Encrypts a string using a key')
+        # prefixing the argument with -- means it's optional
+
+        parser.add_argument('encrypt', help='Encrypt')
+
+        parser.add_argument(
+            'public_key_file_path',
+            type=str,
+            help="Path of where the key is located")
+
+        parser.add_argument(
+            'message',
+            type=str,
+            help="Message to be encrypted")
+
+        args = parser.parse_args(sys.argv[1:])
+
+        public_key = rsa.PublicKey.importFile(args.public_key_file_path)
+        print(rsa.encrypt(public_key, args.message))
+
+    def decrypt(self):
+        parser = argparse.ArgumentParser(
+            description='Decrypts a string using a key')
+        # prefixing the argument with -- means it's optional
+
+        parser.add_argument('decrypt', help='Decrypt')
+
+        parser.add_argument(
+            'private_key_file_path',
+            type=str,
+            help="Path of where the key is located")
+
+        parser.add_argument(
+            'message',
+            type=str,
+            help="Message to be decrypted")
+
+        args = parser.parse_args(sys.argv[1:])
+
+        private_key = rsa.PrivateKey.importFile(args.private_key_file_path)
+        print(rsa.decrypt(private_key, args.message))
+
+    def sign(self):
+        parser = argparse.ArgumentParser(
+            description='Signs a file using a private key')
+        # prefixing the argument with -- means it's optional
+
+        parser.add_argument('sign', help='Sign')
+
+        parser.add_argument(
+            'input_file_path',
+            type=str,
+            help="Path of where the input file is located")
+
+        parser.add_argument(
+            'private_key_file_path',
+            type=str,
+            help="Path of the private key")
+
+        parser.add_argument(
+            'output_file_path',
+            type=str,
+            help="Path to store signature")
+
+        args = parser.parse_args(sys.argv[1:])
+        private_key = rsa.PrivateKey.importFile(args.private_key_file_path)
+
+        BLOCKSIZE = 65536
+        hasher = hashlib.sha1()
+        with open(args.output_file_path, 'w+') as ofile:
+            with open(args.input_file_path, 'rb') as afile:
+                buf = afile.read(BLOCKSIZE)
+                while len(buf) > 0:
+                    hasher.update(buf)
+                    buf = afile.read(BLOCKSIZE)
+            hash = hasher.hexdigest()
+
+            signature = rsa.encrypt(private_key, hash)
+            ofile.write(signature)
+
+    def verify(self):
+        parser = argparse.ArgumentParser(
+            description='Verify a signature')
+        # prefixing the argument with -- means it's optional
+
+        parser.add_argument('sign', help='Sign')
+
+        parser.add_argument(
+            'input_file_path',
+            type=str,
+            help="Path of where the input file is located")
+
+        parser.add_argument(
+            'public_key_file_path',
+            type=str,
+            help="Path of the public key")
+
+        parser.add_argument(
+            'signature_file_path',
+            type=str,
+            help="Path to store signature")
+
+        args = parser.parse_args(sys.argv[1:])
+        public_key = rsa.PublicKey.importFile(args.public_key_file_path)
+
+        BLOCKSIZE = 65536
+        hasher = hashlib.sha1()
+        with open(args.signature_file_path, 'r') as ofile:
+            signature = ofile.read()
+
+            try:
+                hash = rsa.decrypt(public_key, signature)
+
+                with open(args.input_file_path, 'rb') as afile:
+                    buf = afile.read(BLOCKSIZE)
+                    while len(buf) > 0:
+                        hasher.update(buf)
+                        buf = afile.read(BLOCKSIZE)
+                file_hash = hasher.hexdigest()
+
+                if file_hash == hash:
+                    print('Verified')
+                else:
+                    print('Not verified')
+            except:
+                print('Not verified')
 
 
 if __name__ == '__main__':
