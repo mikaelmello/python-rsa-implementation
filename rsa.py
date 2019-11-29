@@ -126,19 +126,73 @@ def generate_key_pair(bit_length):
     return public_key, private_key
 
 
-def encrypt(pub, message):
-    """Encrypts an integer array with a provided public key"""
-    cipher = [fexp(byte, pub.e, pub.n) for byte in message]
-    return cipher
+def encrypt(key, message):
+    """Encrypts an integer array with a provided key"""
+
+    length = bits(key.n) // 8
+    max_octets = length - 11
+    plain = bytearray(message, "utf-8")
+    padding_size = length - 3 - len(plain)
+
+    if len(plain) >= max_octets:
+        raise f'Message must have size of at most {max_octets} octets, it has {len(plain)}'
+
+    encryption_block = bytearray()  # EB = 00 || BT || PS || 00 || D
+    encryption_block.append(0x00)
+
+    if type(key) is PrivateKey:
+        encryption_block.append(0x01)
+        for i in range(padding_size):
+            encryption_block.append(0xFF)
+    elif type(key) is PublicKey:
+        encryption_block.append(0x02)
+        for i in range(padding_size):
+            random_octet = secrets.randbits(8)
+            while random_octet == 0x00:
+                random_octet = secrets.randbits(8)
+            encryption_block.append(random_octet)
+    else:
+        raise 'Unknown key type'
+
+    encryption_block.append(0x00)
+
+    encryption_block.extend(plain)
+    data = int.from_bytes(encryption_block, 'big')
+    cipher = fexp(data, key.e, key.n)
+    hexrep = hex(cipher)[2:]
+    return hexrep
 
 
-def decrypt(priv, message):
-    """Decrypts an integer array with a provided private key"""
-    plain = []
-    for byte in message:
-        m1 = fexp(byte, priv.dp, priv.p)
-        m2 = fexp(byte, priv.dq, priv.q)
-        h = (priv.qinv*(m1+priv.p - m2)) % priv.p
-        m = m2 + h*priv.q
-        plain.append(m)
-    return plain
+def decrypt(key, message):
+    """Decrypts an integer array with a provided key key"""
+
+    length = bits(key.n) // 8
+    max_octets = length - 11
+
+    data = int.from_bytes(bytes.fromhex(message), 'big')
+    plain = data
+
+    if type(key) is PrivateKey:
+        m1 = fexp(data, key.dp, key.p)
+        m2 = fexp(data, key.dq, key.q)
+        h = (key.qinv*(m1+key.p - m2)) % key.p
+        plain = m2 + h*key.q
+
+        plain2 = fexp(data, key.d, key.n)
+    else:
+        plain = fexp(data, key.e, key.n)
+
+    plain_bytes = int.to_bytes(plain, length, 'big')
+    if plain_bytes[0] != 0x00:
+        raise 'Invalid decryption, wrong header byte'
+
+    padding_index = 2
+    while plain_bytes[padding_index] != 0x00:
+        padding_index += 1
+    padding_length = padding_index - 2 + 1
+
+    if padding_length < 8:
+        raise 'Invalid padding string'
+
+    data = plain_bytes[padding_index + 1:]
+    return str(data, 'utf-8')
