@@ -4,10 +4,20 @@ import math
 
 def extended_euclid(a, b):
     """Extended euclidean algorithm"""
-    if b == 0:
-        return a, 1, 0
-    q, w, e = extended_euclid(b, a % b)
-    return q, e, w - e * (a//b)
+    s = 0
+    t = 1
+    r = b
+    old_s = 1
+    old_t = 0
+    old_r = a
+
+    while r != 0:
+        quotient = old_r // r
+        old_r, r = (r, old_r - quotient * r)
+        old_s, s = (s, old_s - quotient * s)
+        old_t, t = (t, old_t - quotient * t)
+
+    return old_r, old_s, old_t
 
 
 def mrand(l, r):
@@ -31,13 +41,14 @@ def mulmod(a, b, c):
 
 def fexp(num, exponent, mod):
     """Fast exponentiation, returns (num^exponent)%mod."""
-    if exponent == 0:
-        return 1
-    term = fexp(mulmod(num, num, mod), exponent//2, mod)
-    if exponent % 2 == 0:
-        return term
-    else:
-        return mulmod(term, num, mod)
+    res = 1
+    while exponent > 0:
+        if exponent % 2 == 1:
+            res = (res * num) % mod
+
+        exponent = exponent // 2
+        num = (num * num) % mod
+    return res
 
 
 def is_prime(n):
