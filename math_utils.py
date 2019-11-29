@@ -16,6 +16,14 @@ def mrand(l, r):
     return l + secrets.randbelow(sz)
 
 
+def bits(a):
+    count = 0
+    while a > 0:
+        a = a // 2
+        count += 1
+    return count
+
+
 def mulmod(a, b, c):
     """Returns (a*b)%c"""
     return (a*b) % c
